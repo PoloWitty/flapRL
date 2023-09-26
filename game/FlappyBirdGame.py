@@ -8,10 +8,10 @@ import torch
 import torchvision.transforms as transforms
 from PIL import Image
 
-import gym
-from gym.wrappers import Monitor
-import gym_ple
-from gym_ple import PLEEnv
+import gymnasium as gym
+from gymnasium.wrappers import RecordVideo
+# import gym_ple
+# from gym_ple import PLEEnv
 from utils import *
 
 import warnings
@@ -40,7 +40,7 @@ class FlappyBirdNormal(gym.Wrapper):
             outdir (str): Output directory.
         '''
         if outdir:
-            self.env = Monitor(self.env, directory = outdir, force = True)
+            self.env = RecordVideo(self.env, directory = outdir, force = True)
         
     def step(self, action):
         '''
@@ -52,29 +52,29 @@ class FlappyBirdNormal(gym.Wrapper):
         Returns:
             tuple: state, reward, terminal.
         '''
-        _, reward, terminal, _ = self.env.step(action)
-        state = self.getGameState()
+        obs, reward, terminal, truncated, _ = self.env.step(action)
+        state = self.getGameState(obs)
         if not terminal: reward += 0.5
         else: reward = -1000
         if reward >= 1: reward = 5
         return state, reward, terminal, {}
 
-    def getGameState(self):
+    def getGameState(self,obs):
         '''
         Returns the current game state.
         
         Returns:
             str: A string representing the game state.
         '''
-        gameState = self.env.game_state.getGameState()
-        hor_dist_to_next_pipe = gameState['next_pipe_dist_to_player']
-        ver_dist_to_next_pipe = gameState['next_pipe_bottom_y'] - gameState['player_y']
+        gameState = obs
+        hor_dist_to_next_pipe = gameState[3] # ['next_pipe_dist_to_player']
+        ver_dist_to_next_pipe = gameState[5]-gameState[9] # gameState['next_pipe_bottom_y'] - gameState['player_y']
         if self.rounding:
             hor_dist_to_next_pipe = discretize(hor_dist_to_next_pipe, self.rounding)
             ver_dist_to_next_pipe = discretize(ver_dist_to_next_pipe, self.rounding)
             
         state = []
-        state.append('player_vel' + ' ' + str(gameState['player_vel']))
+        state.append('player_vel' + ' ' + str(gameState[10]))
         state.append('hor_dist_to_next_pipe' + ' ' + str(hor_dist_to_next_pipe))
         state.append('ver_dist_to_next_pipe' + ' ' + str(ver_dist_to_next_pipe))
         return ' '.join(state)
@@ -100,7 +100,7 @@ class FlappyBirdLR(gym.Wrapper):
             outdir (str): Output directory.
         '''
         if outdir:
-            self.env = Monitor(self.env, directory = outdir, force = True)
+            self.env = RecordVideo(self.env, directory = outdir, force = True)
         
     def step(self, action):
         '''
@@ -112,21 +112,27 @@ class FlappyBirdLR(gym.Wrapper):
         Returns:
             tuple: state, reward, terminal.
         '''
-        _, reward, terminal, _ = self.env.step(action)
-        state = self.getGameState()
+        ob, reward, terminal, truncated,_ = self.env.step(action)
+        state = self.getGameState(ob)
         if not terminal: reward += 0.5
         else: reward -= 1000
         if reward >= 1: reward = 5
         return state, reward, terminal, {}
 
-    def getGameState(self):
+    def getGameState(self,ob):
         '''
         Returns the current game state.
         
         Returns:
             dict: A dictionary representing the game state.
         '''
-        return self.env.game_state.getGameState()
+        game_state = {
+            'next_pipe_dist_to_player': ob[3],
+            'next_pipe_bottom_y': ob[5],
+            'player_y': ob[9],
+            'player_vel': ob[10],
+        }
+        return game_state
         
         
 class FlappyBirdDNN(gym.Wrapper):
@@ -149,7 +155,7 @@ class FlappyBirdDNN(gym.Wrapper):
             outdir (str): Output directory.
         '''
         if outdir:
-            self.env = Monitor(self.env, directory = outdir, force = True)
+            self.env = RecordVideo(self.env, directory = outdir, force = True)
         
     def step(self, action):
         '''
@@ -161,25 +167,25 @@ class FlappyBirdDNN(gym.Wrapper):
         Returns:
             tuple: state, reward, terminal.
         '''
-        _, reward, terminal, _ = self.env.step(action)
-        state = self.getGameState()
+        obs, reward, terminal, truncated, _ = self.env.step(action)
+        state = self.getGameState(obs)
         if not terminal: reward += 0.5
         else: reward = -1000
         if reward >= 1: reward = 5
         return state, reward, terminal, {}
 
-    def getGameState(self):
+    def getGameState(self, obs):
         '''
         Returns the current game state.
         
         Returns:
             list: A list representing the game state.
         '''
-        gameState = self.env.game_state.getGameState()
-        hor_dist_to_next_pipe = gameState['next_pipe_dist_to_player']
-        ver_dist_to_next_pipe = gameState['next_pipe_bottom_y'] - gameState['player_y']
+        gameState = obs
+        hor_dist_to_next_pipe = gameState[3] # ['next_pipe_dist_to_player']
+        ver_dist_to_next_pipe = gameState[5]-gameState[9] # gameState['next_pipe_bottom_y'] - gameState['player_y']
         state = []
-        state.append(gameState['player_vel'])
+        state.append(gameState[10])
         state.append(hor_dist_to_next_pipe)
         state.append(ver_dist_to_next_pipe)
         return state
@@ -207,7 +213,7 @@ class FlappyBirdCNN(gym.Wrapper):
             outdir (str): Output directory.
         '''
         if outdir:
-            self.env = Monitor(self.env, directory = outdir, force = True)
+            self.env = RecordVideo(self.env, directory = outdir, force = True)
         
     def step(self, action):
         '''
@@ -219,22 +225,24 @@ class FlappyBirdCNN(gym.Wrapper):
         Returns:
             tuple: state, reward, terminal.
         '''
-        state, reward, terminal, _ = self.env.step(action)
+        state, reward, terminal, truncated, _ = self.env.step(action)
+        state = self.env.render() # get the rgb_array
         state = self.transform.process(state)
         if not terminal: reward += 0.5
         else: reward = -1000
         if reward >= 1: reward = 5
         return state, reward, terminal, {}
 
-    def getGameState(self):
+    def getGameState(self, obs):
         '''
         Returns the current game state.
         
         Returns:
             list: A list representing the game state.
         '''
-        gameState = self.env.game_state.getGameState()
-        return list(gameState.values())
+        # gameState = self.env.game_state.getGameState()
+        # return list(gameState.values())
+        return list(obs)
 
 
 class Transform(object):

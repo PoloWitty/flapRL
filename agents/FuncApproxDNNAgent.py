@@ -13,7 +13,7 @@ import json
 import random
 import numpy as np
 
-import gym
+import gymnasium as gym
 from TemplateAgent import FlappyBirdAgent
 from FlappyBirdGame import FlappyBirdDNN
 
@@ -175,7 +175,7 @@ class FuncApproxDNNAgent(FlappyBirdAgent):
             torch.manual_seed(self.hparams.seed)
         self.optimizer = torch.optim.SGD(self.net.parameters(), lr = self.hparams.lr)
 
-        self.env.seed(random.randint(0, 100))
+        self.env.reset(seed=random.randint(0,100))
         self.net.train()
 
         reward = 0
@@ -192,9 +192,9 @@ class FuncApproxDNNAgent(FlappyBirdAgent):
             self.net.train()
             score = 0
             totalReward = 0
-            ob = self.env.reset()
+            ob,_ = self.env.reset()
             gameIter = []
-            state = self.env.getGameState()
+            state = self.env.getGameState(ob)
             
             while True:
                 action = self.act(state)
@@ -239,7 +239,7 @@ class FuncApproxDNNAgent(FlappyBirdAgent):
             dict: A set of scores.
         '''
         self.epsilon = 0
-        self.env.seed(0)
+        self.env.reset(seed=0)
         self.net.eval()
 
         reward = 0
@@ -252,8 +252,8 @@ class FuncApproxDNNAgent(FlappyBirdAgent):
             for i in range(numIters):
                 score = 0
                 totalReward = 0
-                ob = self.env.reset()
-                state = self.env.getGameState()
+                ob,_ = self.env.reset()
+                state = self.env.getGameState(ob)
                 
                 while True:
                     action = self.act(state)

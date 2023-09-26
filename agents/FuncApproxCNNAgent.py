@@ -13,7 +13,7 @@ import json
 import random
 import numpy as np
 
-import gym
+import gymnasium as gym
 from TemplateAgent import FlappyBirdAgent
 from FlappyBirdGame import FlappyBirdCNN
 
@@ -164,7 +164,7 @@ class FuncApproxCNNAgent(FlappyBirdAgent):
         '''
         super().__init__(actions)
         self.probFlap = probFlap
-        self.env = FlappyBirdCNN(gym.make('FlappyBird-v0'))
+        self.env = FlappyBirdCNN(gym.make('FlappyBird-v0',render_mode='rgb_array'))
         
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.net = Net().to(self.device)
@@ -234,7 +234,7 @@ class FuncApproxCNNAgent(FlappyBirdAgent):
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr = self.hparams.lr)
         self.experienceReplay = ExperienceReplay(self.hparams.num_experience)
 
-        self.env.seed(random.randint(0, 100))
+        self.env.reset(seed=random.randint(0,100))
         self.net.train()
 
         reward = 0
@@ -256,6 +256,7 @@ class FuncApproxCNNAgent(FlappyBirdAgent):
             
             # Performs a dummy action.
             state, _, _, _ = self.env.step(1)
+
             
             while True:
                 counter += 1
@@ -303,7 +304,7 @@ class FuncApproxCNNAgent(FlappyBirdAgent):
             dict: A set of scores.
         '''
         self.epsilon = 0
-        self.env.seed(0)
+        self.env.reset(seed=0)
         self.net.eval()
 
         reward = 0
@@ -316,7 +317,7 @@ class FuncApproxCNNAgent(FlappyBirdAgent):
             for i in range(numIters):       
                 score = 0
                 totalReward = 0
-                ob = self.env.reset()
+                ob,_ = self.env.reset()
                 
                 # Performs a dummy action.
                 state, _, _, _ = self.env.step(1)

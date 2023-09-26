@@ -10,9 +10,10 @@ from collections import defaultdict
 import json
 import random
 
-import gym
+import gymnasium as gym
 from TemplateAgent import FlappyBirdAgent
 from FlappyBirdGame import FlappyBirdNormal
+import flappy_bird_gymnasium
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -79,7 +80,7 @@ class BaselineAgent(FlappyBirdAgent):
         Returns:
             dict: A set of scores.
         '''
-        self.env.seed(0)
+        self.env.reset(seed=0)
 
         done = False
         maxScore = 0
@@ -90,19 +91,17 @@ class BaselineAgent(FlappyBirdAgent):
         for i in range(numIters):
             score = 0
             totalReward = 0
-            ob = self.env.reset()
-            state = self.env.getGameState()
+            ob,_ = self.env.reset()
+            state = self.env.getGameState(ob)
             
             while True:
                 action = self.act(state)
                 state, reward, done, _ = self.env.step(action)
-#                self.env.render()  # Uncomment it to display graphics.
                 totalReward += reward
                 if reward >= 1:
                     score += 1
                 counter += 1
                 if done:
-                    break
                     break
                     
             output[score] += 1

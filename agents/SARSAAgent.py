@@ -11,7 +11,7 @@ import json
 import random
 import numpy as np
 
-import gym
+import gymnasium as gym
 from TemplateAgent import FlappyBirdAgent
 from FlappyBirdGame import FlappyBirdNormal
 
@@ -106,7 +106,7 @@ class SARSAAgent(FlappyBirdAgent):
         self.etaDecay = etaDecay
         self.evalPerIters = evalPerIters
         self.numItersEval = numItersEval
-        self.env.seed(random.randint(0, 100))
+        self.env.reset(seed=random.randint(0,100))
 
         done = False
         maxScore = 0
@@ -120,9 +120,9 @@ class SARSAAgent(FlappyBirdAgent):
                            else self.initialEpsilon
             score = 0
             totalReward = 0
-            ob = self.env.reset()
+            ob,_ = self.env.reset()
             gameIter = []
-            state = self.env.getGameState()
+            state = self.env.getGameState(ob)
             action = self.act(state)
             
             while True:
@@ -172,7 +172,7 @@ class SARSAAgent(FlappyBirdAgent):
             dict: A set of scores.
         '''
         self.epsilon = 0
-        self.env.seed(0)
+        self.env.reset(seed=0)
 
         done = False
         maxScore = 0
@@ -182,13 +182,12 @@ class SARSAAgent(FlappyBirdAgent):
         for i in range(numIters):
             score = 0
             totalReward = 0
-            ob = self.env.reset()
-            state = self.env.getGameState()
+            ob,_ = self.env.reset()
+            state = self.env.getGameState(ob)
             
             while True:
                 action = self.act(state)
                 state, reward, done, _ = self.env.step(action)
-#                self.env.render()  # Uncomment it to display graphics.
                 totalReward += reward
                 if reward >= 1:
                     score += 1
