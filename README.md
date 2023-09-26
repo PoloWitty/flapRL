@@ -1,5 +1,7 @@
 # FlapAI-Bird
 
+> Note that this repo is adapted from https://github.com/taivu1998/FlapAI-Bird. Change some code to adapt for the usage of gymnasium.
+
 This AI program implements several AI agents for playing Flappy Bird. The program applies reinforcement learning algorithms, including SARSA, Q-Learning, and Function Approximation, and Deep Q Networks. After training for 10,000 iterations, the agents regularly achieves high scores of 1400+, with the highest in-game score of 2069. [[Paper]](https://arxiv.org/abs/2003.09579) [[Poster]](https://stanford-cs221.github.io/autumn2019-extra/posters/18.pdf)
 
 <p align="center">
