@@ -40,7 +40,7 @@ class FlappyBirdNormal(gym.Wrapper):
             outdir (str): Output directory.
         '''
         if outdir:
-            self.env = RecordVideo(self.env, directory = outdir, force = True)
+            self.env = RecordVideo(self.env, video_folder = outdir)
         
     def step(self, action):
         '''
@@ -53,11 +53,12 @@ class FlappyBirdNormal(gym.Wrapper):
             tuple: state, reward, terminal.
         '''
         obs, reward, terminal, truncated, _ = self.env.step(action)
+        done = terminal or truncated
         state = self.getGameState(obs)
-        if not terminal: reward += 0.5
-        else: reward = -1000
-        if reward >= 1: reward = 5
-        return state, reward, terminal, {}
+        # if not done: reward += 0.5
+        # else: reward = -1000
+        # if reward >= 1: reward = 5
+        return state, reward, done, {}
 
     def getGameState(self,obs):
         '''

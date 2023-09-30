@@ -44,7 +44,7 @@ def parseArgs():
                         help = 'Discount factor.')
     parser.add_argument('--numTrainIters', type = int, default = 10000,
                         help = 'Number of training iterations.')
-    parser.add_argument('--numTestIters', type = int, default = 1000,
+    parser.add_argument('--numTestIters', type = int, default = 500,
                         help = 'Number of testing iterations.')
     parser.add_argument('--evalPerIters', type = int, default = 250,
                         help = 'Frequency of running evaluation.')

@@ -35,7 +35,7 @@ class QLearningAgent(FlappyBirdAgent):
         super().__init__(actions)
         self.probFlap = probFlap
         self.qValues = defaultdict(float)
-        self.env = FlappyBirdNormal(gym.make('FlappyBird-v0'), rounding = rounding)
+        self.env = FlappyBirdNormal(gym.make('FlappyBird-v0', render_mode='rgb_array'), rounding = rounding)
 
     def act(self, state):
         '''
@@ -129,7 +129,6 @@ class QLearningAgent(FlappyBirdAgent):
                 nextState, reward, done, _ = self.env.step(action)
                 gameIter.append((state, action, reward, nextState))
                 state = nextState
-#                self.env.render()  # Uncomment it to display graphics.
                 totalReward += reward
                 if reward >= 1:
                     score += 1
@@ -171,6 +170,10 @@ class QLearningAgent(FlappyBirdAgent):
         '''
         self.epsilon = 0
         self.env.reset(seed=0)
+        # save output video
+        # if not os.path.isdir('video'):
+        #     os.mkdir('video')
+        # self.env.save_output(outdir='./video')
 
         done = False
         maxScore = 0
@@ -212,6 +215,8 @@ class QLearningAgent(FlappyBirdAgent):
             action (int): 0 or 1.
             reward (int): The reward value.
         '''
+        import pdb
+        pdb.set_trace()
         nextQValues = [self.qValues.get((nextState, nextAction), 0) for nextAction in self.actions]
         nextValue = max(nextQValues)
         self.qValues[(state, action)] = (1 - self.eta) * self.qValues.get((state, action), 0) \
