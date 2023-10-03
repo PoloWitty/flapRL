@@ -10,6 +10,7 @@ from distutils.util import strtobool
 from typing import Callable
 
 import gymnasium as gym
+from gymnasium.core import Env
 import numpy as np
 import torch
 import torch.nn as nn
@@ -96,8 +97,10 @@ class ProcessObservation(gym.ObservationWrapper, gym.utils.RecordConstructorArgs
         """
         gym.utils.RecordConstructorArgs.__init__(self)
         gym.ObservationWrapper.__init__(self, env)
+        self.env_width = env.unwrapped._screen_size[0]
+        self.env_height = env.unwrapped._screen_size[1]
         self.observation_space = gym.spaces.Box(
-                    -np.inf, np.inf, shape=(4,), dtype=np.float32
+                    -np.inf, np.inf, shape=(3,), dtype=np.float32
         )
         self.rounding = rounding
 
@@ -125,38 +128,62 @@ class ProcessObservation(gym.ObservationWrapper, gym.utils.RecordConstructorArgs
         Returns:
             The processed observations
         """
-        hor_dist_to_next_pipe = observation[3] # ['next_pipe_dist_to_player']
-        ver_dist_to_next_pipe_down = observation[5]-observation[9] # observation['next_pipe_bottom_y'] - observation['player_y']
-        ver_dist_to_next_pipe_top = observation[4]-observation[9] # observation['next_pipe_bottom_y'] - observation['player_y']
+        # recover to original size
+        player_y = observation[9]*self.env_height
+        player_x = self.unwrapped._game.player_x
+
+        for i in range(3):
+            if observation[i*3]*self.env_width > player_x:
+                PIPE_WIDTH = 52 # hard code
+                PLAYER_WIDTH = 34
+                PLAYER_HEIGHT = 24
+                hor_dist_to_next_pipe = observation[i*3+0]*self.env_width - player_x # from the center of the pipe gap to the player's center
+                next_pipe_top_y = observation[i*3+1]*self.env_height
+                next_pipe_bottom_y = observation[i*3+2]*self.env_height
+                break
+
+        
+        if next_pipe_bottom_y == self.env_height and next_pipe_top_y == 0:
+            pipe_gap = self.unwrapped._game._pipe_gap_size
+            next_pipe_top_y = self.env_height / 2 - pipe_gap / 2
+            next_pipe_bottom_y = self.env_height / 2 + pipe_gap / 2
+        
+        v_dist = (next_pipe_top_y + next_pipe_bottom_y)/2 - (player_y + PLAYER_HEIGHT/2) # from the center of the pipe gap to player's center
+
+        # ver_dist_to_next_pipe_down = next_pipe_bottom_y - player_y # observation['next_pipe_bottom_y'] - observation['player_y']
+        # ver_dist_to_next_pipe_top = next_pipe_top_y - player_y # observation['next_pipe_top_y'] - observation['player_y']
         player_vel = observation[10]
-
-        # state = []
-        # state.append('player_vel' + ' ' + str(observation[10]))
-        # state.append('hor_dist_to_next_pipe' + ' ' + str(hor_dist_to_next_pipe))
-        # state.append('ver_dist_to_next_pipe' + ' ' + str(ver_dist_to_next_pipe))
-
-        # processed_observation = {
-        #     'hor_dist_to_next_pipe': hor_dist_to_next_pipe,
-        #     'ver_dist_to_next_pipe_down': ver_dist_to_next_pipe_down,
-        #     'ver_dist_to_next_pipe_top': ver_dist_to_next_pipe_top,
-        #     'player_vel': player_vel
-        #     }
 
         return np.array([
             self.discretize(hor_dist_to_next_pipe),
-            self.discretize(ver_dist_to_next_pipe_down),
-            self.discretize(ver_dist_to_next_pipe_top),
+            self.discretize(v_dist),
             player_vel
         ],dtype=np.float32)
-        # return np.array([self.discretize(o) for o in observation], dtype=np.float32)
 
+class PostprocessRewardWrapper(gym.Wrapper):
+    def __init__(self, env: Env):
+        super().__init__(env)
+    
+    def step(
+        self, action
+    ):
+        """Uses the :meth:`step` of the :attr:`env` that can be overwritten to change the returned data."""
+        observation, reward, terminated, truncated, info = self.env.step(action)
+        if reward==0.1: # stay alive for a frame
+            d = math.sqrt(observation[0]**2 + observation[1]**2)
+            min_reward = 0.05; max_reward = 0.5; init_d=230 # hard code
+            reward = (max_reward - min_reward)/(0-init_d) * d + max_reward
+            reward = max(reward, min_reward)
+        return observation, reward, terminated, truncated, info 
 
 def make_env(env_id, seed, idx, capture_video, run_name, rounding=0):
     def thunk():
         if capture_video and idx == 0:
-            env = ProcessObservation(gym.make(env_id, render_mode="rgb_array"),rounding=rounding) # (512, 288, 3) when render()
+            env = ProcessObservation(gym.make(env_id, render_mode="rgb_array"),rounding=rounding) # (288, 512, 3) when render()
+            env = PostprocessRewardWrapper(env)
             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
         else:
+            env = PostprocessRewardWrapper(env)
             env = ProcessObservation(gym.make(env_id),rounding=rounding)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env.action_space.seed(seed)
@@ -246,21 +273,17 @@ class QNetwork(nn.Module):
     def __init__(self, env):
         super().__init__()
         self.hor_dist_net = nn.Sequential(
-            GaussianRBF(32,cutoff=512,start=0),
-            nn.ReLU(),
+            GaussianRBF(32,cutoff=288,start=-30),
             nn.Linear(32, 16),
             nn.ReLU(),
         )
-        self._ver_dist_transform = GaussianRBF(32,cutoff=288,start=-288)# 2 ver dist
         self.ver_dist_net = nn.Sequential(
-            nn.Linear(64, 32), 
-            nn.ReLU(),
+            GaussianRBF(32,cutoff=512,start=-512),
             nn.Linear(32, 16),
             nn.ReLU(),
         )
         self.vel_net = nn.Sequential(
             GaussianRBF(32,cutoff=100,start=-100), # 1 vertical vel 
-            nn.ReLU(),
             nn.Linear(32, 16),
             nn.ReLU(),
         )
@@ -278,12 +301,9 @@ class QNetwork(nn.Module):
         # hor
         hor_x = self.hor_dist_net(x[:,0]) 
         # ver
-        ver_x_down = self._ver_dist_transform(x[:,1])
-        ver_x_top = self._ver_dist_transform(x[:,2])
-        ver_x = torch.concat([ver_x_down,ver_x_top],dim=-1)
-        ver_x = self.ver_dist_net(ver_x)
+        ver_x = self.ver_dist_net(x[:,1])
         # vel
-        vel_x = self.vel_net(x[:,3])
+        vel_x = self.vel_net(x[:,2])
 
         x = torch.concat((hor_x,ver_x,vel_x),dim=-1)
         x = self.att(x)
@@ -294,11 +314,11 @@ class QNetwork(nn.Module):
 #     def __init__(self, env):
 #         super().__init__()
 #         self.network = nn.Sequential(
-#             nn.Linear(np.array(env.single_observation_space.shape).prod(), 32),
+#             nn.Linear(np.array(env.single_observation_space.shape).prod(), 128),
 #             nn.ReLU(),
-#             nn.Linear(32, 16),
+#             nn.Linear(128, 32),
 #             nn.ReLU(),
-#             nn.Linear(16, env.single_action_space.n),
+#             nn.Linear(32, env.single_action_space.n),
 #         )
 
 #     def forward(self, x):

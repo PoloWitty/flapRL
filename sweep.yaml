@@ -1,0 +1,40 @@
+program: dqn_flap.py
+method: bayes
+metric:
+  name: charts/episodic_length
+  goal: maximize
+
+parameters:
+  total-timesteps:
+    values: [1e5, 5e5, 1e6, 5e6]
+  rounding:
+    values: [0, 5, 10]
+  buffer-size:
+    values: [1e4, 5e4, 8e4]
+  tau:
+    distribution: uniform
+    min: 0.75
+    max: 1.0
+  learning-rate:
+    distribution: uniform
+    min: 1e-4
+    max: 5e-3
+
+early_terminate:
+  type: hyperband
+  min_iter: 7e3
+command:
+  - ${interpreter}
+  - ${program}
+  - "--exp-name"
+  - "DQN"
+  - "--track"
+  - "--wandb-project-name"
+  - "dqn_flap"
+  - "--capture-video"
+  - "--save-model"
+  - "--exploration-fraction"
+  - "0.5"
+  - "--end-e"
+  - "0.1"
+  - ${args}
