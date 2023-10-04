@@ -1,16 +1,16 @@
 program: dqn_flap.py
 method: bayes
 metric:
-  name: charts/episodic_length
+  name: charts/max_score
   goal: maximize
 
 parameters:
   total-timesteps:
-    values: [1e5, 5e5, 1e6, 5e6]
+    values: [5e5, 1e6]
   rounding:
     values: [0, 5, 10]
   buffer-size:
-    values: [1e4, 5e4, 8e4]
+    values: [5e4, 8e4, 1e5]
   tau:
     distribution: uniform
     min: 0.75
@@ -20,9 +20,6 @@ parameters:
     min: 1e-4
     max: 5e-3
 
-early_terminate:
-  type: hyperband
-  min_iter: 7e3
 command:
   - ${interpreter}
   - ${program}
@@ -36,5 +33,7 @@ command:
   - "--exploration-fraction"
   - "0.5"
   - "--end-e"
+  - "0"
+  - "--start-e"
   - "0.1"
   - ${args}
