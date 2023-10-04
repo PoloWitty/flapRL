@@ -273,28 +273,28 @@ class QNetwork(nn.Module):
     def __init__(self, env):
         super().__init__()
         self.hor_dist_net = nn.Sequential(
-            GaussianRBF(32,cutoff=288,start=-30),
-            nn.Linear(32, 16),
+            GaussianRBF(64,cutoff=288,start=-30),
+            nn.Linear(64, 32),
             nn.ReLU(),
         )
         self.ver_dist_net = nn.Sequential(
-            GaussianRBF(32,cutoff=512,start=-512),
-            nn.Linear(32, 16),
+            GaussianRBF(64,cutoff=512,start=-512),
+            nn.Linear(64, 32),
             nn.ReLU(),
         )
         self.vel_net = nn.Sequential(
-            GaussianRBF(32,cutoff=100,start=-100), # 1 vertical vel 
-            nn.Linear(32, 16),
+            GaussianRBF(64,cutoff=1,start=-1), # 1 vertical vel 
+            nn.Linear(64, 32),
             nn.ReLU(),
         )
         self.att = nn.Sequential(
-            nn.Linear(16*3, 24),
+            nn.Linear(32*3, 64),
             nn.ReLU(),
-            nn.Linear(24,12),
+            nn.Linear(64,32),
             nn.ReLU()
         )
         self.out = nn.Sequential(
-            nn.Linear(12, env.single_action_space.n),
+            nn.Linear(32, env.single_action_space.n),
         )
 
     def forward(self, x):
@@ -386,7 +386,7 @@ poetry run pip install "stable_baselines3==2.0.0a1"
         handle_timeout_termination=False,
     )
     start_time = time.time()
-
+    iteration = 0; max_score = 0
     # TRY NOT TO MODIFY: start the game
     obs, _ = envs.reset(seed=args.seed)
     for global_step in range(args.total_timesteps):
@@ -407,10 +407,16 @@ poetry run pip install "stable_baselines3==2.0.0a1"
                 # Skip the envs that are not done
                 if "episode" not in info:
                     continue
-                print(f"global_step={global_step}, episodic_return={info['episode']['r']}")
-                writer.add_scalar("charts/episodic_return", info["episode"]["r"], global_step)
-                writer.add_scalar("charts/episodic_length", info["episode"]["l"], global_step)
-                writer.add_scalar("charts/epsilon", epsilon, global_step)
+                print(f"iteration={iteration}, episodic_return={info['episode']['r']}")
+                writer.add_scalar("charts/iteration",iteration, iteration)
+                writer.add_scalar("charts/episodic_return", info["episode"]["r"], iteration)
+                writer.add_scalar("charts/episodic_length", info["episode"]["l"], iteration)
+                writer.add_scalar("charts/epsilon", epsilon, iteration)
+                writer.add_scalar("charts/episodic_score", info['score'], iteration)
+                iteration += 1
+                if info['score'] >= max_score:
+                    max_score = info['score']
+                writer.add_scalar("charts/max_score", max_score, iteration)
 
         # TRY NOT TO MODIFY: save data to reply buffer; handle `final_observation`
         real_next_obs = next_obs.copy()
