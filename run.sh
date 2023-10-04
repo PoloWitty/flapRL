@@ -2,8 +2,8 @@ export WANDB_API_KEY='db0c63baeacf1eeb82545a162529728192b83020'
 export WANDB_PROJECT='dqn_flap'
 
 # export WANDB_MODE=disabled
-timesteps=500000
-bufferSize=50000
+timesteps=1000000
+bufferSize=100000
 
 python dqn_flap.py \
     --exp-name test \
@@ -16,7 +16,8 @@ python dqn_flap.py \
     --hf-entity polowitty \
     --learning-rate 1e-3 \
     --exploration-fraction 0.5 \
-    --end-e 0.1 \
+    --end-e 0 \
+    --start-e 0.1 \
     --rounding 10 \
     --tau 0.9
 
@@ -30,4 +31,4 @@ python dqn_flap.py \
 
 # wandb sweep
 # wandb sweep --project dqn_flap sweep.yaml
-# wandb agent polowitty/dqn_flap/bfc89lag
+# wandb agent polowitty/dqn_flap/jjgyime5
