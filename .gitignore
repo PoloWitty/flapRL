@@ -2,3 +2,6 @@
 *.pyc
 *.json
 scores/
+videos/
+runs/
+wandb/

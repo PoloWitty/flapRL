@@ -1,12 +1,12 @@
 export WANDB_API_KEY='db0c63baeacf1eeb82545a162529728192b83020'
-export WANDB_PROJECT='dqn_flap'
+export WANDB_PROJECT='dqn_flap_20231011'
 
 # export WANDB_MODE=disabled
 timesteps=1000000
 bufferSize=100000
 
 python dqn_flap.py \
-    --exp-name test \
+    --exp-name midDoubleDQN_bot_continualSpace \
     --track \
     --wandb-project-name $WANDB_PROJECT \
     --capture-video \
@@ -18,9 +18,7 @@ python dqn_flap.py \
     --exploration-fraction 0.5 \
     --end-e 0 \
     --start-e 0.1 \
-    --rounding 10 \
-    --tau 0.9
-
+    --action-downsample-ratio 1
 
 # installation
 # pip install flappy-bird-gymnasium
