@@ -25,7 +25,7 @@ from gymnasium.wrappers import TransformReward
 PIPE_WIDTH = 52 # hard code
 PLAYER_WIDTH = 34
 PLAYER_HEIGHT = 24
-PIPE_GAP = 150
+PIPE_GAP = 100
 BASE_HEIGHT = 112
 
 def parse_args():
@@ -395,18 +395,22 @@ class QNetwork(nn.Module):
         self.hor_dist_net = nn.Sequential(
             GaussianRBF(input_d,cutoff=288,start=-288,trainable=True),
             nn.Linear(input_d, input_d),
+            nn.InstanceNorm1d(input_d)
         )
         self.ver_dist_net = nn.Sequential(
             GaussianRBF(input_d,cutoff=180,start=-180,trainable=True),
             nn.Linear(input_d, input_d),
+            nn.InstanceNorm1d(input_d)
         )
         self.next_ver_dist_net = nn.Sequential(
             GaussianRBF(input_d,cutoff=180,start=-180,trainable=True),
             nn.Linear(input_d, input_d),
+            nn.InstanceNorm1d(input_d)
         )
         self.vel_net = nn.Sequential(
             GaussianRBF(input_d,cutoff=1,start=-1,trainable=True), # 1 vertical vel 
             nn.Linear(input_d, input_d),
+            nn.InstanceNorm1d(input_d)
         )
 
         # self.emb = nn.Linear(np.array(env.single_observation_space.shape).prod(), d)
@@ -425,7 +429,7 @@ class QNetwork(nn.Module):
         next_ver_y = self.ver_dist_net(x[:,2])
         # vel
         vel_y = self.vel_net(x[:,3])
-        x = torch.concat((hor_x,ver_y,next_ver_y,vel_y),dim=-1)
+        x = torch.concat((hor_x,ver_y,next_ver_y,vel_y),dim=-1) # (b, d)
 
         x = x.unsqueeze(0) # (1, b, d)
         # x = self.emb(x)
@@ -503,7 +507,7 @@ poetry run pip install "stable_baselines3==2.0.0a1"
     obs, _ = envs.reset(seed=args.seed)
     for global_step in range(args.total_timesteps):
         episode_len += 1
-        if episode_len < 80: # frame num to the first pipe is fixed as 100
+        if episode_len < 90: # frame num to the first pipe is fixed as 100
             # fixed policy: flap once every 18 frame
             actions = np.array([episode_len % 18 == 0 for _ in range(envs.num_envs)],dtype=np.int64) 
             next_obs, rewards, terminated, truncated, infos = envs.step(actions)
@@ -547,7 +551,7 @@ poetry run pip install "stable_baselines3==2.0.0a1"
             low_death_flag = True if abs(v_dist) < PIPE_GAP/2 else False
             t = 0
             last_flap = True
-            for _ in range(len(moves)): # only add the last 500 frame before die to the replay buffer
+            for _ in range(len(moves)):
                 t += 1
                 move = moves.pop()
                 act = move[2][0] # use [0] to get the element from np.array
