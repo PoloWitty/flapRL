@@ -5,3 +5,4 @@ scores/
 videos/
 runs/
 wandb/
+upload.py

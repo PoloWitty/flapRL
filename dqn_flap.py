@@ -231,8 +231,8 @@ def make_env(env_id, seed, idx, capture_video, run_name, rounding=0):
             env = PostprocessRewardWrapper(env)
             env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
         else:
-            env = PostprocessRewardWrapper(env)
             env = ProcessObservation(gym.make(env_id),rounding=rounding)
+            env = PostprocessRewardWrapper(env)
         env = gym.wrappers.RecordEpisodeStatistics(env)
         env.action_space.seed(seed)
 
@@ -435,6 +435,12 @@ class QNetwork(nn.Module):
         # x = self.emb(x)
         x = self.transformer_encoder(x).squeeze(0)
         return self.classifer(x)
+
+    def save(self, path):
+        dir_path = '/'.join(str(path).split('/')[:-1])
+        if not os.path.exists(dir_path):
+            os.makedirs(dir_path)
+        torch.save(self.state_dict(),str(path)+'.zip')
 
 def linear_schedule(start_e: float, end_e: float, duration: int, t: int):
     slope = (end_e - start_e) / duration
